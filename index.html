@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -314,13 +315,19 @@
                 </div>
 
                 <div class="form-group">
+                    <label>學校/宿舍</label>
+                    <select id="dormSchool" onchange="updateDormBuildings()">
+                        <option value="">請選擇學校</option>
+                        <option value="啟英高中">啟英高中</option>
+                        <option value="治平高中">治平高中</option>
+                        <option value="萬能科技大學">萬能科技大學</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label>宿舍樓棟</label>
                     <select id="dormBuilding">
-                        <option value="">請選擇宿舍樓棟</option>
-                        <option value="A棟">A棟</option>
-                        <option value="B棟">B棟</option>
-                        <option value="C棟">C棟</option>
-                        <option value="D棟">D棟</option>
+                        <option value="">請先選擇學校</option>
                     </select>
                 </div>
 
@@ -349,9 +356,22 @@
                 <h2>⚙️ 系統管理</h2>
                 
                 <div class="form-group">
+                    <label>選擇學校設定座標</label>
+                    <select id="schoolSelect" onchange="loadSchoolCoordinates()">
+                        <option value="">請選擇學校</option>
+                        <option value="啟英高中">啟英高中</option>
+                        <option value="治平高中">治平高中</option>
+                        <option value="萬能科技大學">萬能科技大學</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label>宿舍中心座標</label>
-                    <input type="text" id="dormCenterLat" placeholder="緯度" value="25.0330">
-                    <input type="text" id="dormCenterLng" placeholder="經度" value="121.5654" style="margin-top: 10px;">
+                    <input type="text" id="dormCenterLat" placeholder="緯度" readonly>
+                    <input type="text" id="dormCenterLng" placeholder="經度" readonly style="margin-top: 10px;">
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                        ※ 座標會根據選擇的學校自動更新
+                    </p>
                 </div>
 
                 <div class="form-group">
@@ -405,9 +425,13 @@
     </div>
 
     <script>
-        // 系統設定
+        // 系統設定 - 支援多個宿舍座標
         let settings = {
-            dormCenter: { lat: 25.0330, lng: 121.5654 },
+            dormCenters: {
+                "啟英高中": { lat: 25.9745716, lng: 121.2346071 },
+                "治平高中": { lat: 24.9163541, lng: 121.1885086 },
+                "萬能科技大學": { lat: 24.99257378, lng: 121.2301635 }
+            },
             allowedRange: 500,
             checkinTimeStart: "18:00",
             checkinTimeEnd: "23:00"
@@ -429,7 +453,37 @@
             document.getElementById('statsEndDate').value = today;
         });
 
-        // 切換頁面
+        // 根據選擇的學校更新宿舍樓棟選項
+        function updateDormBuildings() {
+            const school = document.getElementById('dormSchool').value;
+            const buildingSelect = document.getElementById('dormBuilding');
+            
+            // 清空現有選項
+            buildingSelect.innerHTML = '';
+            
+            if (!school) {
+                buildingSelect.innerHTML = '<option value="">請先選擇學校</option>';
+                return;
+            }
+            
+            // 根據學校設定不同的樓棟選項
+            const buildings = {
+                "啟英高中": ["男生宿舍A棟", "男生宿舍B棟", "女生宿舍A棟", "女生宿舍B棟"],
+                "治平高中": ["學生宿舍1棟", "學生宿舍2棟", "學生宿舍3棟"],
+                "萬能科技大學": ["A棟", "B棟", "C棟", "D棟", "E棟", "F棟"]
+            };
+            
+            buildingSelect.innerHTML = '<option value="">請選擇宿舍樓棟</option>';
+            
+            if (buildings[school]) {
+                buildings[school].forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building;
+                    option.textContent = building;
+                    buildingSelect.appendChild(option);
+                });
+            }
+        }
         function showSection(sectionId) {
             // 隱藏所有頁面
             document.querySelectorAll('.section').forEach(section => {
@@ -458,27 +512,8 @@
                         document.getElementById('currentLocation').textContent = 
                             `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                         
-                        // 檢查是否在宿舍範圍內
-                        const distance = calculateDistance(
-                            lat, lng, 
-                            settings.dormCenter.lat, settings.dormCenter.lng
-                        );
-                        
-                        const rangeText = distance <= settings.allowedRange ? 
-                            `✅ 在範圍內 (${Math.round(distance)}m)` : 
-                            `❌ 超出範圍 (${Math.round(distance)}m)`;
-                        
-                        document.getElementById('dormRange').textContent = rangeText;
-                        
-                        // 更新打卡按鈕狀態
-                        const checkinBtn = document.getElementById('checkinBtn');
-                        if (distance > settings.allowedRange) {
-                            checkinBtn.disabled = true;
-                            checkinBtn.textContent = '❌ 不在宿舍範圍內';
-                        } else {
-                            checkinBtn.disabled = false;
-                            checkinBtn.textContent = '🎯 立即打卡';
-                        }
+                        // 檢查所有學校的距離
+                        checkAllSchoolDistances(lat, lng);
                     },
                     function(error) {
                         document.getElementById('currentLocation').textContent = '定位失敗';
@@ -492,6 +527,50 @@
                 );
             } else {
                 document.getElementById('currentLocation').textContent = '不支援定位功能';
+            }
+        }
+
+        // 檢查所有學校的距離
+        function checkAllSchoolDistances(userLat, userLng) {
+            let closestSchool = null;
+            let closestDistance = Infinity;
+            let withinRange = false;
+
+            // 檢查每個學校的距離
+            for (const [schoolName, coords] of Object.entries(settings.dormCenters)) {
+                const distance = calculateDistance(userLat, userLng, coords.lat, coords.lng);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestSchool = schoolName;
+                }
+                
+                if (distance <= settings.allowedRange) {
+                    withinRange = true;
+                }
+            }
+
+            // 更新顯示資訊
+            const rangeText = withinRange ? 
+                `✅ 在 ${closestSchool} 範圍內 (${Math.round(closestDistance)}m)` : 
+                `❌ 最近的學校: ${closestSchool} (${Math.round(closestDistance)}m)`;
+            
+            document.getElementById('dormRange').textContent = rangeText;
+            
+            // 更新打卡按鈕狀態
+            const checkinBtn = document.getElementById('checkinBtn');
+            if (!withinRange) {
+                checkinBtn.disabled = true;
+                checkinBtn.textContent = '❌ 不在任何宿舍範圍內';
+            } else {
+                checkinBtn.disabled = false;
+                checkinBtn.textContent = '🎯 立即打卡';
+                
+                // 自動選擇最近的學校
+                if (closestDistance <= settings.allowedRange) {
+                    document.getElementById('dormSchool').value = closestSchool;
+                    updateDormBuildings();
+                }
             }
         }
 
@@ -511,10 +590,11 @@
         function performCheckin() {
             const userId = document.getElementById('userId').value;
             const userName = document.getElementById('userName').value;
+            const dormSchool = document.getElementById('dormSchool').value;
             const dormBuilding = document.getElementById('dormBuilding').value;
             const roomNumber = document.getElementById('roomNumber').value;
 
-            if (!userId || !userName || !dormBuilding || !roomNumber) {
+            if (!userId || !userName || !dormSchool || !dormBuilding || !roomNumber) {
                 alert('請填寫完整資料！');
                 return;
             }
@@ -534,15 +614,16 @@
                 navigator.geolocation.getCurrentPosition(function(position) {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
-                    const distance = calculateDistance(
-                        lat, lng, 
-                        settings.dormCenter.lat, settings.dormCenter.lng
-                    );
+                    
+                    // 檢查是否在選擇的學校範圍內
+                    const schoolCoords = settings.dormCenters[dormSchool];
+                    const distance = calculateDistance(lat, lng, schoolCoords.lat, schoolCoords.lng);
 
                     const record = {
                         id: Date.now(),
                         userId: userId,
                         userName: userName,
+                        dormSchool: dormSchool,
                         dormBuilding: dormBuilding,
                         roomNumber: roomNumber,
                         latitude: lat,
@@ -556,9 +637,9 @@
                     saveRecords();
                     
                     if (record.status === 'success') {
-                        alert('✅ 打卡成功！');
+                        alert(`✅ ${dormSchool} 打卡成功！`);
                     } else {
-                        alert('❌ 打卡失敗：不在宿舍範圍內');
+                        alert(`❌ 打卡失敗：不在 ${dormSchool} 宿舍範圍內`);
                     }
                     
                     displayRecords();
@@ -589,7 +670,7 @@
                                 <div class="status-badge ${statusClass}">${statusText}</div>
                             </div>
                             <div class="record-details">
-                                🏠 ${record.dormBuilding} ${record.roomNumber}房 | 
+                                🏫 ${record.dormSchool} ${record.dormBuilding} ${record.roomNumber}房 | 
                                 📍 距離: ${record.distance}m | 
                                 🕐 ${date.toLocaleString('zh-TW')}
                             </div>
@@ -606,6 +687,7 @@
             const filteredRecords = checkinRecords.filter(record => 
                 record.userId.toLowerCase().includes(searchTerm) ||
                 record.userName.toLowerCase().includes(searchTerm) ||
+                record.dormSchool.toLowerCase().includes(searchTerm) ||
                 record.dormBuilding.toLowerCase().includes(searchTerm) ||
                 record.roomNumber.toLowerCase().includes(searchTerm)
             );
@@ -630,7 +712,7 @@
                                 <div class="status-badge ${statusClass}">${statusText}</div>
                             </div>
                             <div class="record-details">
-                                🏠 ${record.dormBuilding} ${record.roomNumber}房 | 
+                                🏫 ${record.dormSchool} ${record.dormBuilding} ${record.roomNumber}房 | 
                                 📍 距離: ${record.distance}m | 
                                 🕐 ${date.toLocaleString('zh-TW')}
                             </div>
@@ -660,14 +742,28 @@
 
         // 儲存設定
         function saveSettings() {
-            settings.dormCenter.lat = parseFloat(document.getElementById('dormCenterLat').value);
-            settings.dormCenter.lng = parseFloat(document.getElementById('dormCenterLng').value);
+            const selectedSchool = document.getElementById('schoolSelect').value;
+            
+            if (!selectedSchool) {
+                alert('請先選擇要設定的學校！');
+                return;
+            }
+            
+            const lat = parseFloat(document.getElementById('dormCenterLat').value);
+            const lng = parseFloat(document.getElementById('dormCenterLng').value);
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('座標格式錯誤！');
+                return;
+            }
+            
+            // 更新選中學校的座標
+            settings.dormCenters[selectedSchool] = { lat: lat, lng: lng };
             settings.allowedRange = parseInt(document.getElementById('allowedRange').value);
             settings.checkinTimeStart = document.getElementById('checkinStart').value;
             settings.checkinTimeEnd = document.getElementById('checkinEnd').value;
 
-            // 儲存到記憶體
-            alert('✅ 設定已儲存！');
+            alert(`✅ ${selectedSchool} 的設定已儲存！`);
             getCurrentLocation(); // 重新檢查位置
         }
 
@@ -732,8 +828,13 @@
 
         // 載入設定（從記憶體）
         function loadSettings() {
-            document.getElementById('dormCenterLat').value = settings.dormCenter.lat;
-            document.getElementById('dormCenterLng').value = settings.dormCenter.lng;
+            // 預設載入第一個學校的座標
+            const firstSchool = Object.keys(settings.dormCenters)[0];
+            if (firstSchool) {
+                document.getElementById('schoolSelect').value = firstSchool;
+                loadSchoolCoordinates();
+            }
+            
             document.getElementById('allowedRange').value = settings.allowedRange;
             document.getElementById('checkinStart').value = settings.checkinTimeStart;
             document.getElementById('checkinEnd').value = settings.checkinTimeEnd;
@@ -754,5 +855,5 @@
         setInterval(getCurrentLocation, 30000);
     </script>
 </body>
-</html>
+</html>                    
 
