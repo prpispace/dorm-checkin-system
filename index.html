@@ -1,990 +1,127 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>宿舍定位打卡管理系統</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: transparent;
-            border: none;
-            font-size: 16px;
-        }
-
-        .tab.active {
-            background: white;
-            color: #4facfe;
-            font-weight: bold;
-        }
-
-        .tab:hover {
-            background: #e9ecef;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        .checkin-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .location-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-
-        .checkin-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            border-radius: 50px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .checkin-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .checkin-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #4facfe;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .record-item {
-            background: white;
-            border: 2px solid #e1e5e9;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .record-item:hover {
-            border-color: #4facfe;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .record-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .record-name {
-            font-weight: bold;
-            font-size: 18px;
-            color: #333;
-        }
-
-        .record-time {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .record-details {
-            color: #888;
-            font-size: 14px;
-        }
-
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .stat-label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .search-box {
-            margin-bottom: 20px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 12px 20px;
-            border: 2px solid #e1e5e9;
-            border-radius: 25px;
-            font-size: 16px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🏠 宿舍定位打卡系統</h1>
-            <p>智能化宿舍管理解決方案</p>
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" onclick="showSection('checkin')">📍 打卡</button>
-            <button class="tab" onclick="showSection('records')">📋 記錄</button>
-            <button class="tab" onclick="showSection('manage')">⚙️ 管理</button>
-            <button class="tab" onclick="showSection('stats')">📊 統計</button>
-        </div>
-
-        <div class="content">
-            <!-- 打卡頁面 -->
-            <div id="checkin" class="section active">
-                <div class="checkin-card">
-                    <h2>📍 位置打卡</h2>
-                    <div class="location-info">
-                        <p><strong>目前位置：</strong><span id="currentLocation">正在定位中...</span></p>
-                        <p><strong>宿舍範圍：</strong><span id="dormRange">500公尺內</span></p>
-                    </div>
-                    <button class="checkin-btn" id="checkinBtn" onclick="performCheckin()">
-                        🎯 立即打卡
-                    </button>
-                    <p style="margin-top: 15px; font-size: 14px; opacity: 0.8;">
-                        系統將自動驗證您的位置是否在宿舍範圍內
-                    </p>
-                </div>
-
-                <div class="form-group">
-                    <label>LINE ID（可選）</label>
-                    <input type="text" id="lineId" placeholder="請輸入 LINE ID">
-                </div>
-
-                <div class="form-group">
-                    <label>學號/工號</label>
-                    <input type="text" id="userId" placeholder="請輸入學號或工號">
-                </div>
-
-                <div class="form-group">
-                    <label>姓名</label>
-                    <input type="text" id="userName" placeholder="請輸入姓名">
-                </div>
-
-                <div class="form-group">
-                    <label>學校/宿舍</label>
-                    <select id="dormSchool" onchange="updateDormBuildings()">
-                        <option value="">請選擇學校</option>
-                        <option value="啟英高中">啟英高中</option>
-                        <option value="治平高中">治平高中</option>
-                        <option value="萬能科技大學">萬能科技大學</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>宿舍樓棟</label>
-                    <select id="dormBuilding">
-                        <option value="">請先選擇學校</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>房號</label>
-                    <input type="text" id="roomNumber" placeholder="請輸入房號">
-                </div>
-            </div>
-
-            <!-- 記錄頁面 -->
-            <div id="records" class="section">
-                <h2>📋 打卡記錄</h2>
-                
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="🔍 搜尋學號、姓名或宿舍..." 
-                           onkeyup="filterRecords()">
-                </div>
-
-                <div id="recordsList">
-                    <!-- 記錄將動態載入 -->
-                </div>
-            </div>
-
-            <!-- 管理頁面 -->
-            <div id="manage" class="section">
-                <h2>⚙️ 系統管理</h2>
-                
-                <div class="form-group">
-                    <label>Google Apps Script URL</label>
-                    <input type="url" id="googleScriptUrl" placeholder="請輸入 Google Apps Script 的網址">
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                        ※ 用於將打卡資料自動寫入 Google Sheets
-                    </p>
-                </div>
-
-                <div class="form-group">
-                    <label>選擇學校設定座標</label>
-                    <select id="schoolSelect" onchange="loadSchoolCoordinates()">
-                        <option value="">請選擇學校</option>
-                        <option value="啟英高中">啟英高中</option>
-                        <option value="治平高中">治平高中</option>
-                        <option value="萬能科技大學">萬能科技大學</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>宿舍中心座標</label>
-                    <input type="text" id="dormCenterLat" placeholder="緯度" readonly>
-                    <input type="text" id="dormCenterLng" placeholder="經度" readonly style="margin-top: 10px;">
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">
-                        ※ 座標會根據選擇的學校自動更新
-                    </p>
-                </div>
-
-                <div class="form-group">
-                    <label>允許打卡範圍（公尺）</label>
-                    <input type="number" id="allowedRange" value="500" min="100" max="2000">
-                </div>
-
-                <div class="form-group">
-                    <label>打卡時間限制</label>
-                    <input type="time" id="checkinStart" value="18:00">
-                    <label style="margin-top: 10px;">到</label>
-                    <input type="time" id="checkinEnd" value="23:00">
-                </div>
-
-                <button class="btn" onclick="saveSettings()">💾 儲存設定</button>
-                <button class="btn" onclick="exportData()">📤 匯出資料</button>
-                <button class="btn" onclick="clearAllData()">🗑️ 清除所有資料</button>
-            </div>
-
-            <!-- 統計頁面 -->
-            <div id="stats" class="section">
-                <h2>📊 統計分析</h2>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalCheckins">0</div>
-                        <div class="stat-label">總打卡次數</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="todayCheckins">0</div>
-                        <div class="stat-label">今日打卡</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="successRate">0%</div>
-                        <div class="stat-label">成功率</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="activeUsers">0</div>
-                        <div class="stat-label">活躍用戶</div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>統計日期範圍</label>
-                    <input type="date" id="statsStartDate">
-                    <input type="date" id="statsEndDate" style="margin-top: 10px;">
-                    <button class="btn" onclick="generateStats()" style="margin-top: 10px;">📈 生成統計</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // 系統設定 - 支援多個宿舍座標
-        let settings = {
-            dormCenters: {
-                "啟英高中": { lat: 25.9745716, lng: 121.2346071 },
-                "治平高中": { lat: 24.9163541, lng: 121.1885086 },
-                "萬能科技大學": { lat: 24.99257378, lng: 121.2301635 }
-            },
-            allowedRange: 500,
-            checkinTimeStart: "18:00",
-            checkinTimeEnd: "23:00",
-            googleScriptUrl: ""
-        };
-
-        // 打卡記錄
-        let checkinRecords = [];
-
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSettings();
-            loadRecords();
-            updateStats();
-            getCurrentLocation();
-            
-            // 設定今天的日期為預設值
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('statsStartDate').value = today;
-            document.getElementById('statsEndDate').value = today;
-        });
-
-        // 反向地理編碼 - 取得地址
-        async function getAddressFromCoordinates(lat, lng) {
-            try {
-                // 使用免費的反向地理編碼服務
-                const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh-TW`);
-                const data = await response.json();
-                
-                if (data && data.locality) {
-                    return `${data.city || ''}${data.locality || ''}${data.principalSubdivision || ''}`;
-                }
-                return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            } catch (error) {
-                console.error('地址解析失敗:', error);
-                return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            }
-        }
-
-        // 將資料傳送到 Google Sheets
-        async function sendToGoogleSheets(recordData) {
-            const scriptUrl = settings.googleScriptUrl;
-            
-            if (!scriptUrl) {
-                console.log('未設定 Google Apps Script URL，跳過雲端同步');
-                return;
-            }
-
-            try {
-                // 取得地址資訊
-                const address = await getAddressFromCoordinates(recordData.latitude, recordData.longitude);
-                
-                const payload = {
-                    timestamp: recordData.timestamp,
-                    lineId: recordData.lineId || '',
-                    latitude: recordData.latitude,
-                    longitude: recordData.longitude,
-                    address: address,
-                    userId: recordData.userId,
-                    userName: recordData.userName,
-                    dormSchool: recordData.dormSchool,
-                    dormBuilding: recordData.dormBuilding,
-                    roomNumber: recordData.roomNumber,
-                    distance: recordData.distance,
-                    status: recordData.status
-                };
-
-                const response = await fetch(scriptUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('資料已同步到 Google Sheets:', result);
-                    
-                    // 顯示同步成功訊息
-                    showSyncStatus('✅ 資料已同步到 Google Sheets', 'success');
-                } else {
-                    throw new Error('Google Sheets 同步失敗');
-                }
-            } catch (error) {
-                console.error('Google Sheets 同步錯誤:', error);
-                showSyncStatus('⚠️ Google Sheets 同步失敗，資料僅存於本地', 'warning');
-            }
-        }
-
-        // 顯示同步狀態
-        function showSyncStatus(message, type) {
-            // 建立或取得狀態顯示元素
-            let statusDiv = document.getElementById('syncStatus');
-            if (!statusDiv) {
-                statusDiv = document.createElement('div');
-                statusDiv.id = 'syncStatus';
-                statusDiv.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 10px 15px;
-                    border-radius: 5px;
-                    z-index: 1000;
-                    font-size: 14px;
-                    min-width: 200px;
-                    text-align: center;
-                `;
-                document.body.appendChild(statusDiv);
-            }
-
-            // 設定樣式
-            if (type === 'success') {
-                statusDiv.style.background = '#d4edda';
-                statusDiv.style.color = '#155724';
-                statusDiv.style.border = '1px solid #c3e6cb';
-            } else if (type === 'warning') {
-                statusDiv.style.background = '#fff3cd';
-                statusDiv.style.color = '#856404';
-                statusDiv.style.border = '1px solid #ffeaa7';
-            } else {
-                statusDiv.style.background = '#f8d7da';
-                statusDiv.style.color = '#721c24';
-                statusDiv.style.border = '1px solid #f1b0b7';
-            }
-
-            statusDiv.textContent = message;
-            statusDiv.style.display = 'block';
-
-            // 3秒後自動隱藏
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 3000);
-        }
-        function updateDormBuildings() {
-            const school = document.getElementById('dormSchool').value;
-            const buildingSelect = document.getElementById('dormBuilding');
-            
-            // 清空現有選項
-            buildingSelect.innerHTML = '';
-            
-            if (!school) {
-                buildingSelect.innerHTML = '<option value="">請先選擇學校</option>';
-                return;
-            }
-            
-            // 根據學校設定不同的樓棟選項
-            const buildings = {
-                "啟英高中": ["男生宿舍A棟", "男生宿舍B棟", "女生宿舍A棟", "女生宿舍B棟"],
-                "治平高中": ["學生宿舍1棟", "學生宿舍2棟", "學生宿舍3棟"],
-                "萬能科技大學": ["A棟", "B棟", "C棟", "D棟", "E棟", "F棟"]
-            };
-            
-            buildingSelect.innerHTML = '<option value="">請選擇宿舍樓棟</option>';
-            
-            if (buildings[school]) {
-                buildings[school].forEach(building => {
-                    const option = document.createElement('option');
-                    option.value = building;
-                    option.textContent = building;
-                    buildingSelect.appendChild(option);
-                });
-            }
-        }
-        function showSection(sectionId) {
-            // 隱藏所有頁面
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
-            
-            // 移除所有標籤的 active 狀態
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // 顯示選中的頁面
-            document.getElementById(sectionId).classList.add('active');
-            
-            // 添加選中標籤的 active 狀態
-            event.target.classList.add('active');
-        }
-
-        // 獲取目前位置
-        function getCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        document.getElementById('currentLocation').textContent = 
-                            `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                        
-                        // 檢查所有學校的距離
-                        checkAllSchoolDistances(lat, lng);
-                    },
-                    function(error) {
-                        document.getElementById('currentLocation').textContent = '定位失敗';
-                        console.error('定位錯誤:', error);
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 60000
-                    }
-                );
-            } else {
-                document.getElementById('currentLocation').textContent = '不支援定位功能';
-            }
-        }
-
-        // 檢查所有學校的距離
-        function checkAllSchoolDistances(userLat, userLng) {
-            let closestSchool = null;
-            let closestDistance = Infinity;
-            let withinRange = false;
-
-            // 檢查每個學校的距離
-            for (const [schoolName, coords] of Object.entries(settings.dormCenters)) {
-                const distance = calculateDistance(userLat, userLng, coords.lat, coords.lng);
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestSchool = schoolName;
-                }
-                
-                if (distance <= settings.allowedRange) {
-                    withinRange = true;
-                }
-            }
-
-            // 更新顯示資訊
-            const rangeText = withinRange ? 
-                `✅ 在 ${closestSchool} 範圍內 (${Math.round(closestDistance)}m)` : 
-                `❌ 最近的學校: ${closestSchool} (${Math.round(closestDistance)}m)`;
-            
-            document.getElementById('dormRange').textContent = rangeText;
-            
-            // 更新打卡按鈕狀態
-            const checkinBtn = document.getElementById('checkinBtn');
-            if (!withinRange) {
-                checkinBtn.disabled = true;
-                checkinBtn.textContent = '❌ 不在任何宿舍範圍內';
-            } else {
-                checkinBtn.disabled = false;
-                checkinBtn.textContent = '🎯 立即打卡';
-                
-                // 自動選擇最近的學校
-                if (closestDistance <= settings.allowedRange) {
-                    document.getElementById('dormSchool').value = closestSchool;
-                    updateDormBuildings();
-                }
-            }
-        }
-
-        // 計算兩點間距離
-        function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371000; // 地球半徑（公尺）
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                     Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        // 執行打卡
-        function performCheckin() {
-            const lineId = document.getElementById('lineId').value;
-            const userId = document.getElementById('userId').value;
-            const userName = document.getElementById('userName').value;
-            const dormSchool = document.getElementById('dormSchool').value;
-            const dormBuilding = document.getElementById('dormBuilding').value;
-            const roomNumber = document.getElementById('roomNumber').value;
-
-            if (!userId || !userName || !dormSchool || !dormBuilding || !roomNumber) {
-                alert('請填寫完整資料！');
-                return;
-            }
-
-            // 檢查時間限制
-            const now = new Date();
-            const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
-                              now.getMinutes().toString().padStart(2, '0');
-            
-            if (currentTime < settings.checkinTimeStart || currentTime > settings.checkinTimeEnd) {
-                alert(`打卡時間限制：${settings.checkinTimeStart} - ${settings.checkinTimeEnd}`);
-                return;
-            }
-
-            // 獲取當前位置並執行打卡
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(async function(position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    
-                    // 檢查是否在選擇的學校範圍內
-                    const schoolCoords = settings.dormCenters[dormSchool];
-                    const distance = calculateDistance(lat, lng, schoolCoords.lat, schoolCoords.lng);
-
-                    const record = {
-                        id: Date.now(),
-                        lineId: lineId,
-                        userId: userId,
-                        userName: userName,
-                        dormSchool: dormSchool,
-                        dormBuilding: dormBuilding,
-                        roomNumber: roomNumber,
-                        latitude: lat,
-                        longitude: lng,
-                        distance: Math.round(distance),
-                        timestamp: new Date().toISOString(),
-                        status: distance <= settings.allowedRange ? 'success' : 'failed'
-                    };
-
-                    // 儲存到本地記錄
-                    checkinRecords.push(record);
-                    saveRecords();
-                    
-                    // 同步到 Google Sheets
-                    await sendToGoogleSheets(record);
-                    
-                    if (record.status === 'success') {
-                        alert(`✅ ${dormSchool} 打卡成功！\n資料已記錄並同步至雲端`);
-                    } else {
-                        alert(`❌ 打卡失敗：不在 ${dormSchool} 宿舍範圍內\n但資料已記錄以供查核`);
-                    }
-                    
-                    displayRecords();
-                    updateStats();
-                });
-            }
-        }
-
-        // 顯示打卡記錄
-        function displayRecords() {
-            const recordsList = document.getElementById('recordsList');
-            if (checkinRecords.length === 0) {
-                recordsList.innerHTML = '<p style="text-align: center; color: #666;">暫無打卡記錄</p>';
-                return;
-            }
-
-            const html = checkinRecords
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                .map(record => {
-                    const date = new Date(record.timestamp);
-                    const statusClass = record.status === 'success' ? 'status-success' : 'status-error';
-                    const statusText = record.status === 'success' ? '成功' : '失敗';
-                    
-                    return `
-                        <div class="record-item">
-                            <div class="record-header">
-                                <div class="record-name">${record.userName} (${record.userId})</div>
-                                <div class="status-badge ${statusClass}">${statusText}</div>
-                            </div>
-                            <div class="record-details">
-                                🏫 ${record.dormSchool} ${record.dormBuilding} ${record.roomNumber}房 | 
-                                📍 距離: ${record.distance}m | 
-                                🕐 ${date.toLocaleString('zh-TW')}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            recordsList.innerHTML = html;
-        }
-
-        // 篩選記錄
-        function filterRecords() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filteredRecords = checkinRecords.filter(record => 
-                record.userId.toLowerCase().includes(searchTerm) ||
-                record.userName.toLowerCase().includes(searchTerm) ||
-                record.dormSchool.toLowerCase().includes(searchTerm) ||
-                record.dormBuilding.toLowerCase().includes(searchTerm) ||
-                record.roomNumber.toLowerCase().includes(searchTerm)
-            );
-
-            const recordsList = document.getElementById('recordsList');
-            if (filteredRecords.length === 0) {
-                recordsList.innerHTML = '<p style="text-align: center; color: #666;">找不到符合條件的記錄</p>';
-                return;
-            }
-
-            const html = filteredRecords
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                .map(record => {
-                    const date = new Date(record.timestamp);
-                    const statusClass = record.status === 'success' ? 'status-success' : 'status-error';
-                    const statusText = record.status === 'success' ? '成功' : '失敗';
-                    
-                    return `
-                        <div class="record-item">
-                            <div class="record-header">
-                                <div class="record-name">${record.userName} (${record.userId})</div>
-                                <div class="status-badge ${statusClass}">${statusText}</div>
-                            </div>
-                            <div class="record-details">
-                                🏫 ${record.dormSchool} ${record.dormBuilding} ${record.roomNumber}房 | 
-                                📍 距離: ${record.distance}m | 
-                                🕐 ${date.toLocaleString('zh-TW')}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            recordsList.innerHTML = html;
-        }
-
-        // 更新統計資料
-        function updateStats() {
-            const total = checkinRecords.length;
-            const today = new Date().toDateString();
-            const todayCount = checkinRecords.filter(record => 
-                new Date(record.timestamp).toDateString() === today
-            ).length;
-            const successCount = checkinRecords.filter(record => record.status === 'success').length;
-            const successRate = total > 0 ? Math.round((successCount / total) * 100) : 0;
-            const activeUsers = new Set(checkinRecords.map(record => record.userId)).size;
-
-            document.getElementById('totalCheckins').textContent = total;
-            document.getElementById('todayCheckins').textContent = todayCount;
-            document.getElementById('successRate').textContent = successRate + '%';
-            document.getElementById('activeUsers').textContent = activeUsers;
-        }
-
-        // 儲存設定
-        function saveSettings() {
-            const selectedSchool = document.getElementById('schoolSelect').value;
-            
-            if (!selectedSchool) {
-                alert('請先選擇要設定的學校！');
-                return;
-            }
-            
-            const lat = parseFloat(document.getElementById('dormCenterLat').value);
-            const lng = parseFloat(document.getElementById('dormCenterLng').value);
-            
-            if (isNaN(lat) || isNaN(lng)) {
-                alert('座標格式錯誤！');
-                return;
-            }
-            
-            // 更新選中學校的座標
-            settings.dormCenters[selectedSchool] = { lat: lat, lng: lng };
-            settings.allowedRange = parseInt(document.getElementById('allowedRange').value);
-            settings.checkinTimeStart = document.getElementById('checkinStart').value;
-            settings.checkinTimeEnd = document.getElementById('checkinEnd').value;
-            settings.googleScriptUrl = document.getElementById('googleScriptUrl').value;
-
-            alert(`✅ ${selectedSchool} 的設定已儲存！\n${settings.googleScriptUrl ? 'Google Sheets 同步已啟用' : 'Google Sheets 同步未設定'}`);
-            getCurrentLocation(); // 重新檢查位置
-        }
-
-        // 匯出資料
-        function exportData() {
-            const dataStr = JSON.stringify({
-                settings: settings,
-                records: checkinRecords,
-                exportTime: new Date().toISOString()
-            }, null, 2);
-            
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `宿舍打卡資料_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-        }
-
-        // 清除所有資料
-        function clearAllData() {
-            if (confirm('確定要清除所有打卡記錄嗎？此操作無法恢復！')) {
-                checkinRecords = [];
-                displayRecords();
-                updateStats();
-                alert('✅ 所有資料已清除！');
-            }
-        }
-
-        // 生成統計報告
-        function generateStats() {
-            const startDate = new Date(document.getElementById('statsStartDate').value);
-            const endDate = new Date(document.getElementById('statsEndDate').value);
-            
-            if (startDate > endDate) {
-                alert('開始日期不能大於結束日期！');
-                return;
-            }
-
-            const filteredRecords = checkinRecords.filter(record => {
-                const recordDate = new Date(record.timestamp);
-                return recordDate >= startDate && recordDate <= endDate;
-            });
-
-            const stats = {
-                total: filteredRecords.length,
-                success: filteredRecords.filter(r => r.status === 'success').length,
-                failed: filteredRecords.filter(r => r.status === 'failed').length,
-                users: new Set(filteredRecords.map(r => r.userId)).size
-            };
-
-            alert(`📊 統計結果（${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}）：
-總打卡次數：${stats.total}
-成功次數：${stats.success}
-失敗次數：${stats.failed}
-參與用戶：${stats.users}人
-成功率：${stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0}%`);
-        }
-
-        // 載入設定（從記憶體）
-        function loadSettings() {
-            // 預設載入第一個學校的座標
-            const firstSchool = Object.keys(settings.dormCenters)[0];
-            if (firstSchool) {
-                document.getElementById('schoolSelect').value = firstSchool;
-                loadSchoolCoordinates();
-            }
-            
-            document.getElementById('allowedRange').value = settings.allowedRange;
-            document.getElementById('checkinStart').value = settings.checkinTimeStart;
-            document.getElementById('checkinEnd').value = settings.checkinTimeEnd;
-            document.getElementById('googleScriptUrl').value = settings.googleScriptUrl;
-        }
-
-        // 儲存記錄（記憶體中）
-        function saveRecords() {
-            // 在實際應用中，這裡會儲存到後端資料庫
-            console.log('記錄已儲存到記憶體');
-        }
-
-        // 載入記錄（從記憶體）
-        function loadRecords() {
-            displayRecords();
-        }
-
-        // 定期更新位置（每30秒）
-        setInterval(getCurrentLocation, 30000);
-    </script>
-</body>
-</html>
+// Google Apps Script 程式碼
+// 請複製此程式碼到 Google Apps Script 編輯器中
+
+function doPost(e) {
+  try {
+    // 解析接收到的資料
+    const data = JSON.parse(e.postData.contents);
+    
+    // 開啟指定的 Google Sheets
+    const spreadsheetId = '1I4bK8dxjdChiov2pSbD2t9PejT9PlRS00CVGrJJGxyE';
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    
+    // 取得「定位」工作表
+    let sheet = spreadsheet.getSheetByName('定位');
+    
+    // 如果「定位」工作表不存在，則建立它
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet('定位');
+      
+      // 設定表頭
+      const headers = ['時間', 'LINE ID', '緯度', '經度', '地址', '學號', '姓名', '學校', '宿舍樓棟', '房號', '距離(m)', '狀態'];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      // 格式化表頭
+      const headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setBackground('#4285f4');
+      headerRange.setFontColor('white');
+      headerRange.setFontWeight('bold');
+      headerRange.setHorizontalAlignment('center');
+    }
+    
+    // 準備要寫入的資料
+    const rowData = [
+      data.timestamp || new Date().toISOString(),
+      data.lineId || '',
+      data.latitude || '',
+      data.longitude || '',
+      data.address || '',
+      data.userId || '',
+      data.userName || '',
+      data.dormSchool || '',
+      data.dormBuilding || '',
+      data.roomNumber || '',
+      data.distance || '',
+      data.status || ''
+    ];
+    
+    // 在最後一行新增資料
+    sheet.appendRow(rowData);
+    
+    // 格式化新增的行
+    const lastRow = sheet.getLastRow();
+    const range = sheet.getRange(lastRow, 1, 1, rowData.length);
+    
+    // 根據狀態設定行的顏色
+    if (data.status === 'success') {
+      range.setBackground('#d4edda'); // 成功：淺綠色
+    } else if (data.status === 'failed') {
+      range.setBackground('#f8d7da'); // 失敗：淺紅色
+    }
+    
+    // 設定時間格式
+    if (rowData[0]) {
+      sheet.getRange(lastRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+    }
+    
+    // 設定座標格式
+    sheet.getRange(lastRow, 3).setNumberFormat('0.000000'); // 緯度
+    sheet.getRange(lastRow, 4).setNumberFormat('0.000000'); // 經度
+    
+    // 自動調整欄寬
+    sheet.autoResizeColumns(1, rowData.length);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: true,
+        message: '資料已成功寫入 Google Sheets',
+        row: lastRow
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    console.error('錯誤:', error);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        message: '寫入失敗: ' + error.message
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  // 處理 GET 請求（測試用）
+  return ContentService
+    .createTextOutput('Google Apps Script 已就緒，可接收 POST 請求')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+// 測試函數
+function testFunction() {
+  const testData = {
+    timestamp: new Date().toISOString(),
+    lineId: 'test123',
+    latitude: 25.0330,
+    longitude: 121.5654,
+    address: '台北市信義區',
+    userId: 'A123456789',
+    userName: '測試學生',
+    dormSchool: '測試學校',
+    dormBuilding: 'A棟',
+    roomNumber: '101',
+    distance: 50,
+    status: 'success'
+  };
+  
+  // 模擬 POST 請求
+  const e = {
+    postData: {
+      contents: JSON.stringify(testData)
+    }
+  };
+  
+  const result = doPost(e);
+  console.log(result.getContent());
+}
