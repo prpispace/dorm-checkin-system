@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LINE LIFF 定位打卡</title>
+  <style>
+    :root{--bg:#0b1220;--card:#111a2b;--ink:#e6edf3;--muted:#9fb3c8;--ok:#38bdf8;--warn:#f59e0b;--err:#ef4444;--accent:#22c55e}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+    .wrap{max-width:860px;margin:auto;padding:20px}
+    .card{background:linear-gradient(180deg,#0f1629 0,#0b1220 100%);border:1px solid #1f2a44;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:20px}
+    h1{font-size:22px;margin:0 0 16px;display:flex;align-items:center;gap:8px}
+    h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--warn);display:inline-block}
+    .grid{display:grid;gap:12px}
+    @media(min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+    label{font-weight:600;font-size:14px;color:var(--muted)} input,select,textarea{width:100%;padding:12px 14px;border:1px solid #243353;background:#0b1424;color:var(--ink);border-radius:10px;outline:none}
+    .row{display:flex;gap:10px;align-items:center}
+    button{cursor:pointer;border:1px solid #243353;background:#0b1424;color:var(--ink);padding:12px 14px;border-radius:12px}
+    button.primary{background:linear-gradient(90deg,#2563eb,#06b6d4);border:none}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+    .kpi div{background:rgba(255,255,255,.04);border:1px solid #1f2a44;border-radius:12px;padding:10px 12px}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:#101a2b;border:1px solid #1f2a44;padding:6px 8px;border-radius:999px;color:var(--muted);font-size:12px}
+    .hint{color:var(--muted);font-size:13px}
+    .ok{color:var(--accent)} .err{color:var(--err)} .warn{color:var(--warn)}
+    .footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .small{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>📍 LIFF 定位打卡 <span id="envBadge" class="badge">初始化中…</span></h1>
+      <div class="grid">
+        <div>
+          <label>學號（自動帶入 / 可手填）</label>
+          <input id="studentId" placeholder="例如：A1234567" />
+        </div>
+        <div>
+          <label>姓名（可選）</label>
+          <input id="studentName" placeholder="例如：王小明" />
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:8px">
+        <div>
+          <label>動作</label>
+          <select id="action">
+            <option value="回宿舍">回宿舍</option>
+            <option value="離開宿舍">離開宿舍</option>
+          </select>
+        </div>
+        <div>
+          <label>宿舍</label>
+          <select id="dorm">
+            <option value="啟英">啟英</option>
+            <option value="萬能">萬能</option>
+            <option value="治平">治平</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div><div class="hint">緯度</div><div id="lat" class="mono">—</div></div>
+        <div><div class="hint">經度</div><div id="lng" class="mono">—</div></div>
+        <div><div class="hint">精準度(m)</div><div id="acc" class="mono">—</div></div>
+        <div><div class="hint">時間</div><div id="ts" class="mono">—</div></div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label>備註（可選）</label>
+          <textarea id="note" rows="3" placeholder="例：臨時返宿、社團活動晚歸…"></textarea>
+          <div class="small">若定位權限被拒，可改用 LINE 位置訊息：<a href="line://nv/location" class="small" style="color:#93c5fd">開啟位置傳送</a></div>
+        </div>
+        <div>
+          <label>送出狀態</label>
+          <div id="status" class="small">尚未送出</div>
+          <div class="footer">
+            <button id="btnLocate">📡 重新定位</button>
+            <button id="btnSubmit" class="primary">✅ 送出打卡</button>
+            <button id="btnClose">✖️ 關閉</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top:8px">
+        設定指引：將 <code class="mono">LIFF_ID</code> 與 <code class="mono">ENDPOINT_URL</code> 改成你的值。預設以 GAS Web App 收資料。若要送 Google 表單，請改用 <code>submitToGoogleForm</code>，並填入對應的 entry 欄位 ID。
+      </div>
+    </div>
+  </div>
+
+  <!-- LINE LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script>
+    /***********************
+     * 🔧 可調整參數（必改）
+     ***********************/
+    const LIFF_ID = "REPLACE_WITH_YOUR_LIFF_ID"; // 例：165xxxx-xxxxx
+    const ENDPOINT_URL = "https://script.google.com/macros/s/XXXXXXXX/exec"; // 你的 GAS Web App（POST JSON）
+
+    // ⛳ 若你已讓 BOT 在開啟 LIFF 前附帶學號，可用 ?studentId=xxx 自動帶入
+    //    或是從 localStorage 讀取上次輸入的學號
+
+    /***********************
+     * 狀態管理
+     ***********************/
+    let latestGeo = null;
+
+    function qs(id){return document.getElementById(id)}
+    function setStatus(html, klass){
+      const el = qs('status');
+      el.className = `small ${klass||''}`;
+      el.innerHTML = html;
+    }
+
+    function fmtTs(t){
+      const d = new Date(t);
+      const pad = n=>String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    }
+
+    /***********************
+     * LIFF 初始化
+     ***********************/
+    async function initLiff(){
+      try{
+        await liff.init({ liffId: LIFF_ID });
+        qs('envBadge').textContent = `LIFF 已載入 / ${liff.isInClient() ? 'LINE 內' : '瀏覽器'}`;
+        if(!liff.isLoggedIn()){
+          liff.login();
+          return; // login 後會重載
+        }
+        // 預填學號：querystring > localStorage
+        const params = new URLSearchParams(location.search);
+        const qStu = params.get('studentId');
+        const qName = params.get('name');
+        if(qStu) { qs('studentId').value = qStu; localStorage.setItem('studentId', qStu) }
+        if(qName){ qs('studentName').value = qName; localStorage.setItem('studentName', qName) }
+        if(!qStu){ qs('studentId').value = localStorage.getItem('studentId') || '' }
+        if(!qName){ qs('studentName').value = localStorage.getItem('studentName') || '' }
+
+        // 取用戶資料（userId 可用於後端比對綁定）
+        const prof = await liff.getProfile();
+        window.__LINE_PROFILE__ = prof; // {userId, displayName, pictureUrl, statusMessage}
+      }catch(err){
+        setStatus(`LIFF 初始化失敗：<span class='err'>${err.message}</span>`,`err`)
+        console.error(err);
+      }
+    }
+
+    /***********************
+     * 取得地理位置
+     ***********************/
+    function locate(){
+      setStatus('定位中… 請允許存取地理位置。', 'warn');
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const c = pos.coords;
+        latestGeo = {
+          lat: Number(c.latitude.toFixed(6)),
+          lng: Number(c.longitude.toFixed(6)),
+          acc: Math.round(c.accuracy),
+          ts: Date.now()
+        };
+        qs('lat').textContent = latestGeo.lat;
+        qs('lng').textContent = latestGeo.lng;
+        qs('acc').textContent = latestGeo.acc;
+        qs('ts').textContent = fmtTs(latestGeo.ts);
+        setStatus('定位完成，可送出。','ok');
+      }, err=>{
+        setStatus(`定位失敗：<span class='err'>${err.message}</span>。請開啟定位或改用 LINE 位置訊息。`,'err');
+        console.error(err);
+      }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+    }
+
+    /***********************
+     * 送出至 GAS（推薦）
+     * 後端可直接寫入 Google 試算表
+     ***********************/
+    async function submitToGAS(){
+      if(!latestGeo){ setStatus('尚未取得定位，請先點「重新定位」。','warn'); return }
+      const payload = {
+        action: qs('action').value,
+        dorm: qs('dorm').value,
+        studentId: (qs('studentId').value||'').trim(),
+        studentName: (qs('studentName').value||'').trim(),
+        note: (qs('note').value||'').trim(),
+        lat: latestGeo.lat,
+        lng: latestGeo.lng,
+        accuracy: latestGeo.acc,
+        timestamp: latestGeo.ts,
+        lineUserId: (window.__LINE_PROFILE__ && window.__LINE_PROFILE__.userId) || null,
+        lineDisplayName: (window.__LINE_PROFILE__ && window.__LINE_PROFILE__.displayName) || null,
+        userAgent: navigator.userAgent,
+        source: 'liff'
+      };
+
+      // 保存學號/姓名以便下次自動帶入
+      if(payload.studentId) localStorage.setItem('studentId', payload.studentId);
+      if(payload.studentName) localStorage.setItem('studentName', payload.studentName);
+
+      setStatus('傳送中…','warn');
+      try{
+        const res = await fetch(ENDPOINT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const text = await res.text();
+        if(!res.ok){ throw new Error(text || res.statusText) }
+        setStatus('✅ 已送出成功。3 秒後自動關閉。','ok');
+        setTimeout(()=>{ try{ liff.closeWindow() }catch(_){} }, 3000);
+      }catch(err){
+        setStatus(`送出失敗：<span class='err'>${err.message}</span>`,'err');
+        console.error(err);
+      }
+    }
+
+    /***********************
+     * 送出至 Google 表單（選用）
+     * 注意：需將欄位改成你的 entry.xxx ID
+     ***********************/
+    async function submitToGoogleForm(){
+      // 🔁 將下列 entry 欄位改成你的 Google 表單對應 ID
+      const FORM_ACTION = "https://docs.google.com/forms/d/e/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/formResponse";
+      const ENTRY_STUDENT_ID = "entry.111111";
+      const ENTRY_NAME       = "entry.222222";
+      const ENTRY_DORM       = "entry.333333";
+      const ENTRY_ACTION     = "entry.444444";
+      const ENTRY_NOTE       = "entry.555555";
+      const ENTRY_LOCATION   = "entry.666666"; // 可合併為「定位訊息」
+
+      if(!latestGeo){ setStatus('尚未取得定位，請先點「重新定位」。','warn'); return }
+
+      const form = new FormData();
+      form.append(ENTRY_STUDENT_ID, (qs('studentId').value||'').trim());
+      form.append(ENTRY_NAME, (qs('studentName').value||'').trim());
+      form.append(ENTRY_DORM, qs('dorm').value);
+      form.append(ENTRY_ACTION, qs('action').value);
+      form.append(ENTRY_NOTE, (qs('note').value||'').trim());
+      form.append(ENTRY_LOCATION, `lat:${latestGeo.lat}, lng:${latestGeo.lng}, acc:${latestGeo.acc}, ts:${fmtTs(latestGeo.ts)}`);
+
+      setStatus('傳送中…','warn');
+      try{
+        const res = await fetch(FORM_ACTION, { method:'POST', mode:'no-cors', body: form });
+        // no-cors 下無法直接確認成功與否，視為送出
+        setStatus('✅ 已送出（Google 表單）','ok');
+        setTimeout(()=>{ try{ liff.closeWindow() }catch(_){} }, 3000);
+      }catch(err){
+        setStatus(`送出失敗：<span class='err'>${err.message}</span>`,'err');
+        console.error(err);
+      }
+    }
+
+    /***********************
+     * 事件綁定
+     ***********************/
+    document.addEventListener('DOMContentLoaded', async ()=>{
+      await initLiff();
+      locate();
+      qs('btnLocate').addEventListener('click', locate);
+      qs('btnSubmit').addEventListener('click', submitToGAS); // 預設送 GAS
+      qs('btnClose').addEventListener('click', ()=>{ try{ liff.closeWindow() }catch(_){ window.close() } });
+    });
+  </script>
+</body>
+</html>
